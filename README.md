@@ -1,5 +1,9 @@
 # Generador 2FA con ESP32-C6 y pantalla ST7789
 
+> **Prototipo educativo:** no auditado ni certificado. La versión Arduino no
+> protege el secreto frente a extracción física de la flash. Consulta
+> [SECURITY.md](SECURITY.md) antes de utilizarlo con una cuenta real.
+
 Este proyecto muestra códigos TOTP de seis dígitos en una pantalla de 320 x 172.
 Al encender, sincroniza la hora mediante la red Wi-Fi configurada, apaga el radio y
 actualiza el código cada 30 segundos.

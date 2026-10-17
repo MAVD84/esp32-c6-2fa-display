@@ -27,6 +27,9 @@ constexpr time_t MAX_CLOCK_DRIFT_SECONDS = 5;
 const char *ntpServer = "pool.ntp.org";
 
 uint8_t hmacKey[] = TOTP_HMAC_KEY;
+static_assert(sizeof(hmacKey) >= 20, "La clave TOTP debe tener al menos 160 bits (20 bytes)");
+static_assert(sizeof(WIFI_SSID) > 1, "WIFI_SSID no puede estar vacio");
+static_assert(sizeof(WIFI_PASSWORD) >= 9, "WIFI_PASSWORD debe tener al menos 8 caracteres");
 TOTP totp(hmacKey, sizeof(hmacKey));
 
 bool timeIsTrusted = false;
@@ -85,6 +88,8 @@ void disableWiFi() {
 bool connectWiFi() {
   if (startupActive) drawStartup();
   else showMessage("Conectando", "Wi-Fi...");
+  WiFi.persistent(false);
+  WiFi.setAutoReconnect(false);
   WiFi.mode(WIFI_STA);
   WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
   const uint32_t started = millis();
@@ -203,7 +208,6 @@ void drawCode() {
 }
 
 void setup() {
-  Serial.begin(115200);
   pinMode(TFT_BL, OUTPUT);
   digitalWrite(TFT_BL, HIGH);
   gfx->begin();

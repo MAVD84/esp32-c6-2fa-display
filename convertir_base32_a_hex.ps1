@@ -1,14 +1,13 @@
-param(
-    [string]$SecretBase32
-)
-
 $ErrorActionPreference = 'Stop'
 
 Write-Host 'Conversor local de secreto TOTP Base32 a bytes hexadecimales'
 Write-Host 'La clave no se guarda ni se envía por Internet.'
-$secret = $SecretBase32
-if ([string]::IsNullOrWhiteSpace($secret)) {
-    $secret = Read-Host 'Pega la clave Base32'
+$secureSecret = Read-Host 'Pega la clave Base32' -AsSecureString
+$secretPointer = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($secureSecret)
+try {
+    $secret = [Runtime.InteropServices.Marshal]::PtrToStringBSTR($secretPointer)
+} finally {
+    [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($secretPointer)
 }
 $normalized = ($secret.ToUpperInvariant() -replace '[\s\-=]', '')
 
@@ -42,6 +41,10 @@ foreach ($character in $normalized.ToCharArray()) {
 
 if ($bytes.Count -eq 0) {
     throw 'La clave no produjo ningún byte.'
+}
+
+if ($bytes.Count -lt 20) {
+    throw 'La clave debe producir al menos 20 bytes (160 bits).'
 }
 
 $hex = ($bytes | ForEach-Object { '0x{0:X2}' -f $_ }) -join ', '

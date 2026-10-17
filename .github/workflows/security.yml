@@ -1,0 +1,52 @@
+name: Seguridad
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  verificar-repositorio:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Descargar código
+        uses: actions/checkout@v4
+
+      - name: Bloquear secretos y binarios rastreados
+        shell: bash
+        run: |
+          set -euo pipefail
+          forbidden="$(git ls-files | grep -E '(^|/)(secrets\.h|.*\.(bin|elf|map))$' || true)"
+          if [[ -n "$forbidden" ]]; then
+            echo "Archivos prohibidos en el repositorio:"
+            echo "$forbidden"
+            exit 1
+          fi
+
+      - name: Verificar plantilla pública
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -Fq 'NOMBRE_DE_TU_RED' secrets.example.h
+          grep -Fq 'CONTRASENA_DE_TU_RED' secrets.example.h
+          grep -Fq '#define TOTP_HMAC_KEY {0x00, 0x00, 0x00, 0x00}' secrets.example.h
+
+      - name: Buscar patrones de credenciales comunes
+        shell: bash
+        run: |
+          set -euo pipefail
+          if git grep -I -n -E '(BEGIN (RSA|EC|OPENSSH) PRIVATE KEY|otpauth://|gh[pousr]_[A-Za-z0-9]{20,})' -- ':!README.md' ':!.github/workflows/security.yml'; then
+            echo 'Se detectó un patrón que podría contener credenciales.'
+            exit 1
+          fi
+
+      - name: Confirmar exclusiones obligatorias
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -Fxq 'secrets.h' .gitignore
+          grep -Fxq '*.bin' .gitignore
+          grep -Fxq '*.elf' .gitignore
+          grep -Fxq '*.map' .gitignore

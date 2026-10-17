@@ -3,7 +3,13 @@
 #include <sys/time.h>
 #include "TOTP.h"
 #include <Arduino_GFX_Library.h>
+#include <Preferences.h>
+
+// Cambiar temporalmente a 1 solo para importar secrets.h a NVS una vez.
+#define ALLOW_BUILD_SECRET_IMPORT 0
+#if ALLOW_BUILD_SECRET_IMPORT
 #include "secrets.h"
+#endif
 
 // Activa esta opción únicamente después de instalar RTClib y conectar un DS3231.
 #define USE_DS3231 0
@@ -26,11 +32,20 @@ constexpr time_t MIN_VALID_EPOCH = 1704067200;  // 2024-01-01 UTC
 constexpr time_t MAX_CLOCK_DRIFT_SECONDS = 5;
 const char *ntpServer = "pool.ntp.org";
 
-uint8_t hmacKey[] = TOTP_HMAC_KEY;
-static_assert(sizeof(hmacKey) >= 20, "La clave TOTP debe tener al menos 160 bits (20 bytes)");
+constexpr size_t MAX_TOTP_KEY_BYTES = 64;
+char wifiSsid[33] = {0};
+char wifiPassword[65] = {0};
+uint8_t hmacKey[MAX_TOTP_KEY_BYTES] = {0};
+size_t hmacKeyLength = 0;
+TOTP *totp = nullptr;
+
+#if ALLOW_BUILD_SECRET_IMPORT
+const uint8_t buildHmacKey[] = TOTP_HMAC_KEY;
+static_assert(sizeof(buildHmacKey) >= 20, "La clave TOTP debe tener al menos 160 bits (20 bytes)");
+static_assert(sizeof(buildHmacKey) <= MAX_TOTP_KEY_BYTES, "La clave TOTP supera 64 bytes");
 static_assert(sizeof(WIFI_SSID) > 1, "WIFI_SSID no puede estar vacio");
 static_assert(sizeof(WIFI_PASSWORD) >= 9, "WIFI_PASSWORD debe tener al menos 8 caracteres");
-TOTP totp(hmacKey, sizeof(hmacKey));
+#endif
 
 bool timeIsTrusted = false;
 uint32_t lastSyncAttemptMs = 0;
@@ -42,6 +57,44 @@ time_t lastDisplayedPeriod = -1;
 bool lastCodeWasWarning = false;
 bool codeScreenReady = false;
 bool startupActive = true;
+
+bool loadProvisionedSecrets() {
+  Preferences preferences;
+  if (!preferences.begin("totp2fa", true)) return false;
+
+  const size_t ssidLength = preferences.getString("ssid", wifiSsid, sizeof(wifiSsid));
+  const size_t passwordLength = preferences.getString("wifiPass", wifiPassword, sizeof(wifiPassword));
+  const size_t storedKeyLength = preferences.getBytesLength("hmacKey");
+  bool valid = ssidLength > 0 && ssidLength <= 32 &&
+               passwordLength >= 8 && passwordLength <= 64 &&
+               storedKeyLength >= 20 && storedKeyLength <= MAX_TOTP_KEY_BYTES;
+
+  if (valid) {
+    hmacKeyLength = preferences.getBytes("hmacKey", hmacKey, sizeof(hmacKey));
+    valid = hmacKeyLength == storedKeyLength;
+  }
+  preferences.end();
+
+  if (!valid) {
+    memset(wifiSsid, 0, sizeof(wifiSsid));
+    memset(wifiPassword, 0, sizeof(wifiPassword));
+    memset(hmacKey, 0, sizeof(hmacKey));
+    hmacKeyLength = 0;
+  }
+  return valid;
+}
+
+#if ALLOW_BUILD_SECRET_IMPORT
+bool importBuildSecrets() {
+  Preferences preferences;
+  if (!preferences.begin("totp2fa", false)) return false;
+  const bool saved = preferences.putString("ssid", WIFI_SSID) == strlen(WIFI_SSID) &&
+                     preferences.putString("wifiPass", WIFI_PASSWORD) == strlen(WIFI_PASSWORD) &&
+                     preferences.putBytes("hmacKey", buildHmacKey, sizeof(buildHmacKey)) == sizeof(buildHmacKey);
+  preferences.end();
+  return saved;
+}
+#endif
 
 void showMessage(const char *line1, const char *line2 = nullptr, uint16_t color = 0x07FF) {
   codeScreenReady = false;
@@ -91,7 +144,7 @@ bool connectWiFi() {
   WiFi.persistent(false);
   WiFi.setAutoReconnect(false);
   WiFi.mode(WIFI_STA);
-  WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
+  WiFi.begin(wifiSsid, wifiPassword);
   const uint32_t started = millis();
   while (WiFi.status() != WL_CONNECTED && millis() - started < WIFI_TIMEOUT_MS) {
     delay(100);
@@ -185,7 +238,7 @@ void drawCode() {
   const time_t currentPeriod = now / 30;
   const bool warning = remaining <= 5;
   if (currentPeriod != lastDisplayedPeriod || warning != lastCodeWasWarning) {
-    char *code = totp.getCode(now);
+    char *code = totp->getCode(now);
     // Solo se limpia el rectángulo ocupado por los seis dígitos.
     gfx->fillRect(15, 62, 290, 64, 0x0000);
     gfx->setTextSize(6);
@@ -213,6 +266,20 @@ void setup() {
   gfx->begin();
   drawStartup();
   delay(700);
+
+  if (!loadProvisionedSecrets()) {
+#if ALLOW_BUILD_SECRET_IMPORT
+    if (!importBuildSecrets() || !loadProvisionedSecrets()) {
+      showMessage("Error guardando", "configuracion", 0xF800);
+      while (true) delay(1000);
+    }
+#else
+    startupActive = false;
+    showMessage("Sin configurar", "Consulta README", 0xF800);
+    while (true) delay(1000);
+#endif
+  }
+  totp = new TOTP(hmacKey, hmacKeyLength);
 
 #if USE_DS3231
   timeIsTrusted = seedTimeFromRtc();

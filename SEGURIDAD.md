@@ -2,8 +2,10 @@
 
 ## Antes de compilar
 
-- `secrets.h` contiene datos privados y está excluido de Git. No compartas tampoco
-  binarios compilados: la clave TOTP forma parte del firmware.
+- `secrets.h` contiene datos privados y está excluido de Git. Solo se incluye en la
+  carga temporal de importación. Con `ALLOW_BUILD_SECRET_IMPORT 0`, la aplicación
+  usa NVS y el binario normal deja de contener esos valores.
+- NVS todavía es extraíble físicamente hasta habilitar Flash Encryption.
 - El código permanece visible y su barra indica la vigencia del intervalo TOTP.
 
 ## RTC opcional

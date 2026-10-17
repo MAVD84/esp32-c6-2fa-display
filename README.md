@@ -24,7 +24,7 @@ actualiza el código cada 30 segundos.
 
 1. Descomprime el ZIP conservando la carpeta `sketch_2fa`.
 2. Abre `secrets.example.h`, completa el SSID y contraseña de tu Wi-Fi y guárdalo
-   con el nombre `secrets.h` en la misma carpeta del `.ino`.
+   temporalmente con el nombre `secrets.h` en la misma carpeta del `.ino`.
 3. Obtén la clave secreta Base32 al configurar TOTP en la cuenta. Guarda también
    los códigos de recuperación proporcionados por el servicio.
 4. Ejecuta `convertir_base32_a_hex.ps1` localmente. Pega únicamente la clave
@@ -33,9 +33,19 @@ actualiza el código cada 30 segundos.
    reemplaza esa línea en `secrets.h`.
 6. En Arduino IDE instala las dos bibliotecas indicadas mediante el Administrador
    de bibliotecas.
-7. Selecciona **ESP32C6 Dev Module**, el puerto correcto y pulsa **Verificar**.
-8. Compara varios códigos con otra app autenticadora antes de depender del equipo.
-9. Pulsa **Subir** solamente cuando la verificación sea correcta.
+7. Selecciona **ESP32C6 Dev Module** y el puerto correcto.
+8. En `sketch_2fa.ino`, cambia temporalmente
+   `ALLOW_BUILD_SECRET_IMPORT` de `0` a `1`, verifica y sube el firmware.
+9. Espera a que aparezca un código válido: esto confirma que la configuración fue
+   guardada en NVS.
+10. Vuelve a cambiar `ALLOW_BUILD_SECRET_IMPORT` a `0`, verifica y sube de nuevo.
+    Esta segunda carga genera el firmware normal sin incluir `secrets.h`.
+11. Elimina o guarda fuera del proyecto el archivo `secrets.h` y compara varios
+    códigos con otra app autenticadora antes de depender del equipo.
+
+No distribuyas ni conserves como versión final el primer binario de importación.
+El firmware con `ALLOW_BUILD_SECRET_IMPORT 0` arranca desde la configuración NVS y
+puede compilarse aunque `secrets.h` no exista.
 
 Si Windows indica que el puerto está ocupado, cierra el Monitor Serie antes de
 intentar la carga.
@@ -44,6 +54,8 @@ intentar la carga.
 
 - Nunca compartas `secrets.h`, capturas del QR, la clave Base32 ni un firmware
   compilado (`.bin`): todos contienen o permiten recuperar el secreto TOTP.
+- La segunda compilación ya no contiene esos valores, pero NVS permanece sin cifrar
+  hasta habilitar Flash Encryption; un atacante físico todavía puede extraerla.
 - Conserva los códigos de recuperación de cada cuenta en un lugar separado.
 - Si el dispositivo se pierde, es robado o se comparte su firmware, revoca ese
   autenticador desde la cuenta y registra uno nuevo.

@@ -9,14 +9,17 @@ No debe considerarse equivalente a una llave FIDO2/WebAuthn ni utilizarse como
 ## Modelo de amenazas actual
 
 El proyecto intenta evitar la publicación accidental de credenciales y rechaza
-configuraciones básicas inseguras durante la compilación. El Wi-Fi se utiliza solo
+configuraciones básicas inseguras durante la importación. Tras una migración de dos
+cargas, el firmware normal obtiene la configuración desde NVS y deja de contener
+SSID, contraseña y clave HMAC en el binario de aplicación. El Wi-Fi se utiliza solo
 para obtener la hora y se apaga después de sincronizar.
 
 La versión Arduino actual **no protege** contra un atacante con acceso físico capaz
-de leer la memoria flash. La clave TOTP permanece en el firmware mientras no se
-habiliten Flash Encryption y Secure Boot. NTP tampoco autentica criptográficamente
-la fuente de tiempo, por lo que una red hostil puede afectar disponibilidad o
-provocar una hora incorrecta; no debería poder obtener la clave HMAC por ese medio.
+de leer la memoria flash. La clave TOTP permanece en NVS sin cifrar mientras no se
+habilite Flash Encryption. Secure Boot también es necesario para impedir firmware
+no autorizado. NTP no autentica criptográficamente la fuente de tiempo, por lo que
+una red hostil puede afectar disponibilidad o provocar una hora incorrecta; no
+debería poder obtener la clave HMAC por ese medio.
 
 ## Divulgación responsable
 

@@ -2,3 +2,11 @@ secrets.h
 *.bin
 *.elf
 *.map
+
+# ESP-IDF security lab: generated configuration, builds and private keys
+security-lab/build*/
+security-lab/sdkconfig
+security-lab/sdkconfig.old
+security-lab/sdkconfig.local
+security-lab/sdkconfig.safe
+security-lab/private/

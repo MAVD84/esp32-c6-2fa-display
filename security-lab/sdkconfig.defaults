@@ -1,0 +1,25 @@
+# Target and flash geometry used by the author's ESP32-C6FH8 board.
+CONFIG_ESPTOOLPY_FLASHSIZE_8MB=y
+
+# Leave extra room for the signed bootloader.
+CONFIG_PARTITION_TABLE_CUSTOM=y
+CONFIG_PARTITION_TABLE_CUSTOM_FILENAME="partitions.csv"
+CONFIG_PARTITION_TABLE_OFFSET=0x10000
+
+# Secure Boot V2 with RSA-3072 signed build artifacts.
+CONFIG_SECURE_BOOT=y
+CONFIG_SECURE_BOOT_V2_ENABLED=y
+CONFIG_SECURE_SIGNED_APPS_RSA_SCHEME=y
+CONFIG_SECURE_BOOT_BUILD_SIGNED_BINARIES=y
+
+# Development mode is intentional for the disposable test-board phase.
+CONFIG_SECURE_FLASH_ENC_ENABLED=y
+CONFIG_SECURE_FLASH_ENCRYPTION_MODE_DEVELOPMENT=y
+
+# NVS data receives its own XTS encryption; its keys are protected by
+# hardware Flash Encryption in the encrypted nvs_keys partition.
+CONFIG_NVS_ENCRYPTION=y
+CONFIG_NVS_SEC_KEY_PROTECT_USING_FLASH_ENC=y
+
+# Do not print application logs in a future production profile.
+CONFIG_LOG_DEFAULT_LEVEL_WARN=y

@@ -35,6 +35,11 @@ Quemar eFuses es irreversible. No uses comandos preparados para otro modelo de
 ESP32 y no pases a producción sin conservar las claves y una vía de actualización
 firmada.
 
+El directorio [`security-lab`](security-lab/README.md) contiene un proyecto ESP-IDF
+6.1 específico para ESP32-C6 que permite validar **solo la compilación** de estas
+protecciones. Está deliberadamente separado del sketch Arduino y no contiene
+órdenes para cargar firmware o quemar eFuses.
+
 ## Comportamiento de recuperación
 
 La conexión Wi-Fi y NTP tienen tiempos límite. Si no hay una hora fiable, el

@@ -27,12 +27,13 @@ eim run "idf.py -B build-c6-safe -D SDKCONFIG=sdkconfig.safe -D SDKCONFIG_DEFAUL
 
 $applicationBinary = Join-Path $labRoot 'build-c6-safe/esp32c6_2fa_security_lab.bin'
 $bootloaderBinary = Join-Path $labRoot 'build-c6-safe/bootloader/bootloader.bin'
-$freshArtifacts = @($applicationBinary, $bootloaderBinary) | Where-Object {
-    -not (Test-Path -LiteralPath $_) -or
-    (Get-Item -LiteralPath $_).LastWriteTime -lt $buildStarted
+$missingArtifacts = @($applicationBinary, $bootloaderBinary) | Where-Object {
+    -not (Test-Path -LiteralPath $_)
 }
+$applicationWasNotRebuilt = (Test-Path -LiteralPath $applicationBinary) -and
+    (Get-Item -LiteralPath $applicationBinary).LastWriteTime -lt $buildStarted
 
-if ($LASTEXITCODE -ne 0 -or $freshArtifacts.Count -ne 0) {
+if ($LASTEXITCODE -ne 0 -or $missingArtifacts.Count -ne 0 -or $applicationWasNotRebuilt) {
     throw 'La compilacion del laboratorio fallo.'
 }
 
